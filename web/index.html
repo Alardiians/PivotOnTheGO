@@ -1,0 +1,1799 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PivotOnTheGO</title>
+  <style>
+    :root {
+      --bg-main: #050509;
+      --bg-panel: #11111a;
+      --bg-panel-alt: #151520;
+      --accent: #ff0044;
+      --accent-soft: #ff3366;
+      --text-main: #f5f5f5;
+      --text-muted: #8888aa;
+      --border-subtle: #2a2a3a;
+      --danger: #ff0044;
+      --success: #00c853;
+      --warning: #ffab00;
+      --font-mono: "Fira Code", "JetBrains Mono", monospace;
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top, #1a0c1f 0, #050509 40%, #000000 100%);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+    }
+    .app-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px 12px 32px;
+    }
+    .app-header { text-align: center; margin-bottom: 16px; }
+    .app-title {
+      font-size: 1.9rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-soft);
+      text-shadow: 0 0 8px rgba(255, 0, 68, 0.6);
+    }
+    .app-subtitle {
+      margin-top: 4px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+    .app-main {
+      background: rgba(10, 10, 18, 0.92);
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      box-shadow: 0 0 24px rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+      position: relative;
+    }
+    .hud-overlay {
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.35;
+      mix-blend-mode: screen;
+    }
+    .hud-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      opacity: 0.8;
+      margin: 4px 8px 0 8px;
+      position: relative;
+      z-index: 2;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border-subtle);
+      background: linear-gradient(90deg, #120712, #190814);
+      position: relative;
+      z-index: 2;
+    }
+    .tab-button {
+      flex: 1;
+      padding: 10px 14px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    }
+    .tab-button:hover {
+      color: var(--accent-soft);
+      background: rgba(255, 0, 68, 0.08);
+    }
+    .tab-button.active {
+      color: var(--accent);
+      background: radial-gradient(circle at top, rgba(255, 0, 68, 0.25), rgba(0, 0, 0, 0));
+      box-shadow: inset 0 -2px 0 var(--accent);
+    }
+    .tab-content { display: none; padding: 16px 18px 20px; }
+    .tab-content.active { display: block; }
+    .panel {
+      background: var(--bg-panel);
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      padding: 12px 14px;
+      margin-bottom: 14px;
+    }
+    .panel h2 { margin-top: 0; font-size: 1.1rem; color: var(--accent-soft); }
+    .panel h3 { margin-top: 0; color: var(--accent); }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    input[type="text"], input[type="number"], textarea {
+      width: 100%;
+      background: var(--bg-panel-alt);
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 6px 8px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      margin-bottom: 8px;
+      outline: none;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--accent-soft);
+      box-shadow: 0 0 0 1px rgba(255, 0, 68, 0.4);
+    }
+    textarea { min-height: 120px; }
+    button {
+      background: radial-gradient(circle at top, var(--accent-soft), var(--accent));
+      border: none;
+      color: white;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      margin: 4px 4px 6px 0;
+      transition: transform 0.08s, box-shadow 0.08s, filter 0.08s;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 12px rgba(255, 0, 68, 0.6);
+      filter: brightness(1.05);
+    }
+    button:active {
+      transform: translateY(0);
+      box-shadow: 0 0 4px rgba(255, 0, 68, 0.4);
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: #222233;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+    }
+    .status-pill .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      margin-right: 6px;
+      background: var(--text-muted);
+    }
+    .status-pill.running .dot { background: var(--success); }
+    .status-pill.running { color: var(--success); }
+    .status-pill.stopped .dot { background: var(--danger); }
+    .status-pill.stopped { color: var(--danger); }
+    .status-pill.running .dot { animation: pulse 1.6s infinite; }
+    .status-pill.stopped .dot { animation: pulse-danger 1.6s infinite; }
+    .grid-two {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .main-columns {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(260px, 1.3fr);
+      gap: 10px;
+      position: relative;
+      z-index: 2;
+    }
+    .main-left { padding: 10px 12px 16px; }
+    .main-right { padding: 10px 12px 16px 0; }
+    .subtitle { font-size: 0.85rem; color: var(--text-muted); }
+    #status { color: var(--success); margin-top: 6px; }
+    #error { color: var(--danger); margin-top: 6px; }
+    #tab-about h2 { color: var(--accent-soft); }
+    #tab-about p { color: var(--text-muted); }
+    .skiddie-status { margin-top: 8px; font-size: 0.8rem; color: var(--text-muted); }
+    @media (max-width: 900px) {
+      .main-columns { grid-template-columns: 1fr; }
+      .main-right { padding: 0 12px 16px 12px; }
+    }
+    .console-panel {
+      background: #06060b;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      margin: 10px 12px 14px;
+      padding: 8px 10px;
+    }
+    .console-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .console-output {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      max-height: 200px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .console-line { margin-bottom: 2px; white-space: pre-wrap; }
+    .console-success { color: #00e676; }
+    .console-error { color: #ff5252; }
+    .console-warn { color: #ffab40; }
+    .console-info { color: #9fa8da; }
+    @keyframes pulse {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.5); }
+      70% { transform: scale(1.02); box-shadow: 0 0 8px 4px rgba(0, 200, 83, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 200, 83, 0); }
+    }
+    @keyframes pulse-danger {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 0, 68, 0.6); }
+      70% { transform: scale(1.03); box-shadow: 0 0 10px 4px rgba(255, 0, 68, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 0, 68, 0); }
+    }
+    @keyframes successFlash {
+      0% { box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.0); }
+      50% { box-shadow: 0 0 12px 3px rgba(0, 200, 83, 0.6); }
+      100% { box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.0); }
+    }
+    .btn-success-flash { animation: successFlash 0.6s ease-out; }
+    .status-pill.running { animation: pulse 1.6s infinite; }
+    .status-pill.stopped { animation: none; }
+    .status-pill.running .dot { animation: pulse 1.6s infinite; }
+    .status-pill.stopped .dot { animation: pulse-danger 1.6s infinite; }
+    body.crt-mode {
+      background: #000;
+    }
+    body.crt-mode .app-main {
+      position: relative;
+      overflow: hidden;
+    }
+    body.crt-mode .app-main::before {
+      content: "";
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.04),
+        rgba(255, 255, 255, 0.04) 1px,
+        transparent 2px,
+        transparent 3px
+      );
+      mix-blend-mode: soft-light;
+      opacity: 0.3;
+    }
+    body.crt-mode .app-main::after {
+      content: "";
+      pointer-events: none;
+      position: absolute;
+      inset: -10px;
+      background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1), transparent 60%);
+      opacity: 0.22;
+      animation: crtFlicker 0.14s infinite;
+    }
+    @keyframes crtFlicker {
+      0% { opacity: 0.18; }
+      50% { opacity: 0.26; }
+      100% { opacity: 0.18; }
+    }
+    .glitch { animation: glitch 0.4s steps(2, end) 1; }
+    @keyframes glitch {
+      0% { transform: translate(0,0); }
+      25% { transform: translate(-1px, 0.5px); }
+      50% { transform: translate(1px, -0.5px); }
+      75% { transform: translate(-0.5px, 1px); }
+      100% { transform: translate(0,0); }
+    }
+    #route-output {
+      font-family: var(--font-mono);
+    }
+    .proxy-profile-list {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .proxy-profile-item {
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-panel-alt);
+      font-size: 0.8rem;
+    }
+    body.girly-mode .proxy-profile-item {
+      background: #ffe5f2;
+      border-color: #ffbddd;
+    }
+    .proxy-profile-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .proxy-profile-actions button {
+      font-size: 0.7rem;
+      padding: 3px 8px;
+    }
+    .proxy-profile-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .file-list {
+      margin-top: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-panel-alt);
+      padding: 4px 6px;
+      font-size: 0.8rem;
+    }
+    .file-list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 3px 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .file-list-item:last-child { border-bottom: none; }
+    .file-list-item-name {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-list-item-meta {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-left: 8px;
+    }
+    .file-list-item-actions button {
+      font-size: 0.7rem;
+      padding: 3px 6px;
+    }
+    .fs-result {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      white-space: pre-wrap;
+    }
+    /* Girly Skiddie Mode theme */
+    body.girly-mode {
+      background: radial-gradient(circle at top, #ffe4f3 0, #ffc6e5 35%, #ffb3dd 60%, #f48fb1 100%);
+    }
+    body.girly-mode .app-main {
+      background: rgba(255, 240, 250, 0.92);
+      border-color: #ffb6d9;
+      box-shadow: 0 0 30px rgba(255, 105, 180, 0.5);
+    }
+    body.girly-mode .app-title {
+      color: #ff4fa3;
+      text-shadow: 0 0 8px rgba(255, 64, 129, 0.7);
+    }
+    body.girly-mode .app-subtitle {
+      color: #b06f95;
+    }
+    body.girly-mode .tabs {
+      background: linear-gradient(90deg, #ffb6c1, #ffcce6);
+      border-bottom-color: #ffb6d9;
+    }
+    body.girly-mode .tab-button {
+      color: #b06f95;
+    }
+    body.girly-mode .tab-button.active {
+      color: #ff2f92;
+      box-shadow: inset 0 -2px 0 #ff2f92;
+    }
+    body.girly-mode .panel {
+      background: #fff0fb;
+      border-color: #ffc4e0;
+    }
+    body.girly-mode input[type="text"],
+    body.girly-mode input[type="number"],
+    body.girly-mode textarea {
+      background: #ffe5f2;
+      border-color: #ffbddd;
+      color: #5a3a4a;
+    }
+    body.girly-mode input:focus,
+    body.girly-mode textarea:focus {
+      border-color: #ff4fa3;
+      box-shadow: 0 0 0 1px rgba(255, 79, 163, 0.4);
+    }
+    body.girly-mode button {
+      background: radial-gradient(circle at top, #ff9fd3, #ff4fa3);
+      box-shadow: 0 0 10px rgba(255, 64, 129, 0.5);
+    }
+    body.girly-mode .console-panel {
+      background: #ffe9f6;
+      border-color: #ffc4e0;
+    }
+    body.girly-mode .console-success { color: #4caf50; }
+    body.girly-mode .console-error { color: #e91e63; }
+    body.girly-mode .console-warn { color: #ff9800; }
+    body.girly-mode .console-info { color: #7b1fa2; }
+    /* Flower rain */
+    .flower {
+      position: fixed;
+      top: -40px;
+      font-size: 24px;
+      pointer-events: none;
+      opacity: 0;
+      animation-name: flower-fall;
+      animation-timing-function: linear;
+      z-index: 9999;
+    }
+    @keyframes flower-fall {
+      0% {
+        transform: translateY(-40px) translateX(0) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(110vh) translateX(40px) rotate(360deg);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="app-title">PivotOnTheGO</div>
+      <div class="app-subtitle">Offensive Lab &amp; Pivot Toolkit</div>
+    </header>
+
+    <div class="app-main">
+      <div class="hud-overlay"></div>
+      <div class="hud-meta">
+        <span>NODE: LOCAL-OPERATOR</span>
+        <span>ENV: LAB</span>
+        <span><label><input type="checkbox" id="crt-toggle"> CRT</label></span>
+      </div>
+      <div class="main-columns">
+        <div class="main-left">
+          <nav class="tabs">
+            <button class="tab-button active" data-tab="pivot">Pivot &amp; Tunnels</button>
+            <button class="tab-button" data-tab="files">File Server</button>
+            <button class="tab-button" data-tab="sandbox">Sandbox</button>
+            <button class="tab-button" data-tab="about">About the Creator</button>
+          </nav>
+
+          <section class="tab-content active" id="tab-pivot">
+            <div class="panel">
+              <h2>Proxy &amp; Agent Configuration</h2>
+              <div class="grid-two">
+                <div>
+                  <label for="public_ip">Public IP / Domain</label>
+                  <input id="public_ip" type="text" placeholder="CHANGEME_PUBLIC_IP">
+                </div>
+                <div>
+                  <label for="proxy_bind">Proxy Bind IP</label>
+                  <input id="proxy_bind" type="text" placeholder="127.0.0.1">
+                </div>
+                <div>
+                  <label for="proxy_port">Proxy Port</label>
+                  <input id="proxy_port" type="number" min="1" max="65535" placeholder="11601">
+                </div>
+                <div>
+                  <label for="proxy_binary">Proxy Binary Path</label>
+                  <input id="proxy_binary" type="text" placeholder="/opt/ligolo/proxy">
+                </div>
+                <div>
+                  <label for="agent_binary">Agent Binary Name</label>
+                  <input id="agent_binary" type="text" placeholder="agent">
+                </div>
+              </div>
+              <div>
+                <button id="saveBtn">Save Config</button>
+                <button id="startProxyBtn">Start Proxy</button>
+                <button id="btn-stop-proxy">Stop Proxy</button>
+                <span class="status-pill" id="proxy-status">
+                  <span class="dot"></span>
+                  <span id="proxy-status-text">unknown</span>
+                </span>
+              </div>
+              <div id="status"></div>
+              <div id="error"></div>
+            </div>
+
+            <div class="panel">
+              <h2>Agent Commands</h2>
+              <div>
+                <button id="linuxCmdBtn">Linux Command</button>
+                <button id="winCmdBtn">Windows Command</button>
+                <button id="copyBtn">Copy</button>
+              </div>
+              <label for="commandBox">Command</label>
+              <textarea id="commandBox" readonly></textarea>
+            </div>
+            <div class="panel">
+              <h2>Route Helper</h2>
+              <p class="subtitle">
+                Quickly build <code>ip route add</code> commands for new internal subnets behind your Ligolo agents.
+              </p>
+              <div class="grid-two">
+                <div>
+                  <label for="route-local-iface">Local interface (e.g. tun0, eth0)</label>
+                  <input type="text" id="route-local-iface" placeholder="tun0">
+
+                  <label for="route-local-gateway">Gateway / next hop (optional)</label>
+                  <input type="text" id="route-local-gateway" placeholder="10.10.14.1">
+
+                  <label for="route-subnet">Target subnet (CIDR)</label>
+                  <input type="text" id="route-subnet" placeholder="10.10.20.0/24">
+                </div>
+                <div>
+                  <label for="route-notes">Notes (optional)</label>
+                  <textarea id="route-notes" rows="4" placeholder="Segment behind agent-win01, contains DC and file servers."></textarea>
+                  <button id="route-generate-btn">Generate Linux Route Command</button>
+                  <button id="route-copy-btn">Copy Command</button>
+                </div>
+              </div>
+              <label for="route-output">Generated route command</label>
+              <textarea id="route-output" rows="2" readonly></textarea>
+            </div>
+            <div class="panel">
+              <h2>SOCKS / Proxy Profiles</h2>
+              <p class="subtitle">
+                Save local SOCKS endpoints and notes for each pivot. Profiles are stored locally in your browser.
+              </p>
+              <div class="grid-two">
+                <div>
+                  <label for="proxy-profile-name">Profile name</label>
+                  <input type="text" id="proxy-profile-name" placeholder="HTB - Agent Win01">
+
+                  <label for="proxy-profile-host">Proxy host</label>
+                  <input type="text" id="proxy-profile-host" placeholder="127.0.0.1">
+
+                  <label for="proxy-profile-port">Proxy port</label>
+                  <input type="number" id="proxy-profile-port" placeholder="11601">
+
+                  <label for="proxy-profile-type">Proxy type</label>
+                  <select id="proxy-profile-type">
+                    <option value="socks5">SOCKS5</option>
+                    <option value="http">HTTP</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="proxy-profile-notes">Notes</label>
+                  <textarea id="proxy-profile-notes" rows="4" placeholder="Pivot to 10.10.20.0/24 via ligolo agent."></textarea>
+                  <button id="proxy-profile-save-btn">Save Profile</button>
+                  <button id="proxy-profile-clear-btn">Clear Form</button>
+                </div>
+              </div>
+              <h3>Saved Profiles</h3>
+              <div id="proxy-profile-list" class="proxy-profile-list"></div>
+            </div>
+            <div class="panel">
+              <h2>Remote Filesystem Scout</h2>
+              <p class="subtitle">
+                Enumerate file paths (no file contents) on a remote host over your tunnel. Requires explicit IP and credentials.
+              </p>
+              <div class="grid-two">
+                <div>
+                  <label for="fs-host">Target IP / Hostname</label>
+                  <input type="text" id="fs-host" placeholder="10.10.20.15">
+
+                  <label for="fs-protocol">Protocol</label>
+                  <select id="fs-protocol">
+                    <option value="ssh">SSH (Linux/Unix)</option>
+                    <option value="smb">SMB (smbclient)</option>
+                    <option value="ftp">FTP (generate-only stub)</option>
+                    <option value="evil-winrm">Evil-WinRM (Windows)</option>
+                  </select>
+
+                  <label for="fs-port">Port (optional)</label>
+                  <input type="number" id="fs-port" placeholder="0">
+
+                  <label for="fs-username">Username</label>
+                  <input type="text" id="fs-username" placeholder="user">
+
+                  <label for="fs-password">Password</label>
+                  <input type="password" id="fs-password" placeholder="password">
+                </div>
+                <div>
+                  <label for="fs-startdir">Start directory</label>
+                  <input type="text" id="fs-startdir" placeholder="/ or C:\">
+
+                  <label for="fs-depth">Recursion depth</label>
+                  <input type="number" id="fs-depth" value="3">
+
+                  <label>Mode</label>
+                  <div>
+                    <label><input type="radio" name="fs-mode" value="fast" checked> Fast</label>
+                    <label style="margin-left:12px;"><input type="radio" name="fs-mode" value="stealth"> Stealth</label>
+                  </div>
+
+                  <label for="fs-smb-share">SMB Share (for SMB)</label>
+                  <input type="text" id="fs-smb-share" placeholder="C$ or share">
+
+                  <button id="fs-run-btn">Run Filesystem Scout</button>
+                </div>
+              </div>
+              <div id="fs-result" class="fs-result"></div>
+            </div>
+          </section>
+
+          <section class="tab-content" id="tab-files">
+            <div class="panel">
+              <h2>File Server Settings</h2>
+              <div class="grid-two">
+                <div>
+                  <label for="file_bind">Bind IP</label>
+                  <input id="file_bind" type="text" placeholder="0.0.0.0">
+                </div>
+                <div>
+                  <label for="file_port">Port</label>
+                  <input id="file_port" type="number" min="1" max="65535" placeholder="8000">
+                </div>
+                <div>
+                  <label for="file_directory">Directory</label>
+                  <input id="file_directory" type="text" placeholder="/opt/pivotonthego/files">
+                </div>
+              </div>
+              <div>
+                <button id="btn-file-save">Save File Server Config</button>
+                <button id="btn-file-start">Start File Server</button>
+                <button id="btn-file-stop">Stop File Server</button>
+                <span class="status-pill" id="file-server-status">
+                  <span class="dot"></span>
+                  <span id="file-server-status-text">unknown</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="panel">
+              <h3>Generate Download Command</h3>
+              <div class="grid-two">
+                <div>
+                  <label for="file_filename">Filename (under directory)</label>
+                  <input id="file_filename" type="text" placeholder="example.bin">
+                </div>
+              </div>
+              <div>
+                <button id="btn-file-linux">Linux Download Command</button>
+                <button id="btn-file-windows">Windows Download Command</button>
+                <button id="btn-file-copy">Copy Command</button>
+              </div>
+              <label for="file_command_output">Download Command</label>
+              <textarea id="file_command_output" rows="3" cols="80" readonly></textarea>
+            </div>
+            <div class="panel">
+              <h2>Loot / File Browser</h2>
+              <p class="subtitle">
+                View files in the current file server directory and generate per-file download one-liners.
+              </p>
+              <button id="file-refresh-btn">Refresh File List</button>
+              <div id="file-list" class="file-list"></div>
+              <button id="file-command-copy-btn">Copy Command</button>
+            </div>
+          </section>
+
+          <section class="tab-content" id="tab-sandbox">
+            <div class="panel">
+              <h2>Sandbox</h2>
+              <p class="subtitle">Future tools and experiments will live here.</p>
+            </div>
+        <div class="panel">
+          <h2>Skiddie Mode</h2>
+          <p class="subtitle">
+            One-button Ligolo-ng installer for Debian-based systems. Downloads proxy/agent, sets them up, and updates your config.
+          </p>
+          <button id="btn-skiddie-run">Run Skiddie Mode</button>
+          <button id="btn-girly-off">Exit Skiddie Mode</button>
+          <div id="skiddie-status" class="skiddie-status"></div>
+        </div>
+          </section>
+
+          <section class="tab-content" id="tab-about">
+            <div class="panel">
+              <h2>Created by Alardiians</h2>
+              <p>
+                I’m <strong>Alardiians</strong>, a Networking Engineer and Cyber Security / Pentesting hobbyist who loves building tools that make ethical hacking workflows faster, cleaner, and more efficient.
+              </p>
+              <p>
+                PivotOnTheGO was created to streamline common pivoting, tunneling, and file-delivery tasks into a single operator-friendly interface, so you can spend more time solving problems and less time fighting with one-off commands.
+              </p>
+              <p>
+                When I’m not breaking down networks or building new tools, I enjoy long walks on the beach followed by a candle-lit dinner — ideally after a successful privesc.
+              </p>
+            </div>
+          </section>
+
+          <section class="console-section">
+            <div class="panel console-panel">
+              <div class="console-header">
+                <span>Operator Console</span>
+                <button id="console-clear-btn">Clear</button>
+              </div>
+              <div id="console-output" class="console-output"></div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="main-right" id="session-sidebar">
+          <div class="panel">
+            <h2>Session Info</h2>
+            <label for="session-name">Lab / Engagement Name</label>
+            <input type="text" id="session-name">
+
+            <label for="session-targets">Primary Target(s)</label>
+            <textarea id="session-targets" rows="3"></textarea>
+
+            <label for="session-notes">Quick Notes</label>
+            <textarea id="session-notes" rows="5"></textarea>
+
+            <button id="session-save-btn">Save Session</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+  <audio id="skiddie-audio" preload="auto">
+    <source src="/assets/media/.hidden/skiddiemode.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="konami-audio" preload="auto">
+    <source src="/assets/media/.hidden/konamisound.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const errorEl = document.getElementById('error');
+    const commandBox = document.getElementById('commandBox');
+    const proxyStatusText = document.getElementById('proxy-status-text');
+    const fileStatusText = document.getElementById('file-server-status-text');
+    const SESSION_KEY = 'swissarmykit_session';
+    const PROXY_PROFILES_KEY = 'swissarmykit_proxy_profiles';
+    let flowerIntervalId = null;
+
+    function setStatus(msg) { statusEl.textContent = msg || ''; }
+    function setError(msg) { errorEl.textContent = msg || ''; }
+
+    function updateStatusPill(el, running) {
+      el.classList.remove('running', 'stopped');
+      if (running === true) el.classList.add('running');
+      else if (running === false) el.classList.add('stopped');
+    }
+
+    function logEvent(level, message) {
+      const container = document.getElementById('console-output');
+      if (!container) return;
+      const line = document.createElement('div');
+      line.classList.add('console-line');
+      const ts = new Date().toLocaleTimeString();
+      let prefix = '[-]';
+      let cls = 'console-info';
+      switch (level) {
+        case 'success': prefix = '[+]'; cls = 'console-success'; break;
+        case 'error': prefix = '[!]'; cls = 'console-error'; break;
+        case 'warn': prefix = '[*]'; cls = 'console-warn'; break;
+        default: break;
+      }
+      line.classList.add(cls);
+      line.textContent = `${prefix} ${ts} - ${message}`;
+      container.appendChild(line);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function flashSuccessButton(buttonId) {
+      const btn = document.getElementById(buttonId);
+      if (!btn) return;
+      btn.classList.add('btn-success-flash');
+      setTimeout(() => btn.classList.remove('btn-success-flash'), 700);
+    }
+
+    function typeWriter(elementId, text, delay = 60, onComplete) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      el.textContent = '';
+      let i = 0;
+      function step() {
+        if (i <= text.length) {
+          el.textContent = text.slice(0, i);
+          i++;
+          setTimeout(step, delay);
+        } else if (onComplete) {
+          onComplete();
+        }
+      }
+      step();
+    }
+
+    function buildRouteCommand() {
+      const iface = (document.getElementById('route-local-iface')?.value || '').trim();
+      const gw = (document.getElementById('route-local-gateway')?.value || '').trim();
+      const subnet = (document.getElementById('route-subnet')?.value || '').trim();
+      const notes = (document.getElementById('route-notes')?.value || '').trim();
+      const out = document.getElementById('route-output');
+
+      if (!subnet) {
+        if (out) out.value = '';
+        logEvent('warn', 'Route Helper: target subnet is required.');
+        return;
+      }
+
+      let cmd = 'sudo ip route add ' + subnet;
+      if (iface) cmd += ' dev ' + iface;
+      if (gw) cmd += ' via ' + gw;
+
+      if (out) {
+        out.value = cmd;
+      }
+
+      let msg = 'Generated route command: ' + cmd;
+      if (notes) msg += ' (' + notes + ')';
+      logEvent('info', msg);
+    }
+
+    function copyRouteCommand() {
+      const out = document.getElementById('route-output');
+      if (!out || !out.value) {
+        logEvent('warn', 'Route Helper: nothing to copy.');
+        return;
+      }
+      navigator.clipboard.writeText(out.value).then(() => {
+        logEvent('success', 'Route command copied to clipboard.');
+      }).catch(err => {
+        console.warn('Clipboard error', err);
+        logEvent('error', 'Failed to copy route command.');
+      });
+    }
+
+    function getProxyProfilesFromStorage() {
+      try {
+        const raw = localStorage.getItem(PROXY_PROFILES_KEY);
+        if (!raw) return [];
+        const profiles = JSON.parse(raw);
+        return Array.isArray(profiles) ? profiles : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveProxyProfiles(profiles) {
+      try {
+        localStorage.setItem(PROXY_PROFILES_KEY, JSON.stringify(profiles));
+      } catch (e) {
+        console.error('Failed to save proxy profiles', e);
+        logEvent('error', 'Failed to save proxy profiles.');
+      }
+    }
+
+    function renderProxyProfiles(profiles) {
+      const container = document.getElementById('proxy-profile-list');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (!profiles.length) {
+        const p = document.createElement('div');
+        p.classList.add('proxy-profile-empty');
+        p.textContent = 'No proxy profiles saved yet.';
+        container.appendChild(p);
+        return;
+      }
+
+      profiles.forEach((p, idx) => {
+        const item = document.createElement('div');
+        item.classList.add('proxy-profile-item');
+
+        const header = document.createElement('div');
+        header.classList.add('proxy-profile-header');
+
+        const title = document.createElement('span');
+        title.textContent = p.name || '(unnamed profile)';
+
+        const actions = document.createElement('div');
+        actions.classList.add('proxy-profile-actions');
+
+        const btnUse = document.createElement('button');
+        btnUse.textContent = 'Use';
+        btnUse.addEventListener('click', () => applyProxyProfile(p));
+
+        const btnDel = document.createElement('button');
+        btnDel.textContent = 'Delete';
+        btnDel.addEventListener('click', () => deleteProxyProfile(idx));
+
+        actions.appendChild(btnUse);
+        actions.appendChild(btnDel);
+
+        header.appendChild(title);
+        header.appendChild(actions);
+
+        const meta = document.createElement('div');
+        meta.classList.add('proxy-profile-meta');
+        meta.textContent = `${p.type || 'socks5'}://${p.host || '127.0.0.1'}:${p.port || ''}`;
+
+        const notes = document.createElement('div');
+        notes.classList.add('proxy-profile-meta');
+        notes.textContent = p.notes || '';
+
+        item.appendChild(header);
+        item.appendChild(meta);
+        item.appendChild(notes);
+
+        container.appendChild(item);
+      });
+    }
+
+    function loadProxyProfiles() {
+      try {
+        const profiles = getProxyProfilesFromStorage();
+        renderProxyProfiles(profiles);
+      } catch (e) {
+        console.error('Failed to load proxy profiles', e);
+        renderProxyProfiles([]);
+      }
+    }
+
+    function readProxyProfileForm() {
+      return {
+        name: (document.getElementById('proxy-profile-name')?.value || '').trim(),
+        host: (document.getElementById('proxy-profile-host')?.value || '').trim() || '127.0.0.1',
+        port: (document.getElementById('proxy-profile-port')?.value || '').trim(),
+        type: (document.getElementById('proxy-profile-type')?.value || 'socks5'),
+        notes: (document.getElementById('proxy-profile-notes')?.value || '').trim(),
+      };
+    }
+
+    function clearProxyProfileForm() {
+      const id = (n) => document.getElementById(n);
+      if (id('proxy-profile-name')) id('proxy-profile-name').value = '';
+      if (id('proxy-profile-host')) id('proxy-profile-host').value = '';
+      if (id('proxy-profile-port')) id('proxy-profile-port').value = '';
+      if (id('proxy-profile-type')) id('proxy-profile-type').value = 'socks5';
+      if (id('proxy-profile-notes')) id('proxy-profile-notes').value = '';
+    }
+
+    function saveProxyProfileFromForm() {
+      const profile = readProxyProfileForm();
+      if (!profile.name) {
+        logEvent('warn', 'Proxy profile name is required.');
+        return;
+      }
+      if (!profile.port) {
+        logEvent('warn', 'Proxy profile port is required.');
+        return;
+      }
+      const profiles = getProxyProfilesFromStorage();
+      profiles.push(profile);
+      saveProxyProfiles(profiles);
+      renderProxyProfiles(profiles);
+      logEvent('success', 'Proxy profile saved: ' + profile.name);
+    }
+
+    function deleteProxyProfile(index) {
+      const profiles = getProxyProfilesFromStorage();
+      if (index < 0 || index >= profiles.length) return;
+      const removed = profiles.splice(index, 1);
+      saveProxyProfiles(profiles);
+      renderProxyProfiles(profiles);
+      if (removed[0]) {
+        logEvent('info', 'Deleted proxy profile: ' + (removed[0].name || '(unnamed)'));
+      }
+    }
+
+    function applyProxyProfile(profile) {
+      const notesArea = document.getElementById('route-notes');
+      if (notesArea && profile.notes) {
+        notesArea.value = profile.notes;
+      }
+      const uri = `${profile.type || 'socks5'}://${profile.host || '127.0.0.1'}:${profile.port || ''}`;
+      logEvent('info', 'Using proxy profile: ' + (profile.name || '(unnamed)') + ' → ' + uri);
+    }
+
+    function sanitizeFilename(name) {
+      return (name || '').replace(/[\\/]/g, '');
+    }
+
+    function generateFileDownloadCommand(filename, osType) {
+      const cleanName = sanitizeFilename(filename);
+      if (!cleanName) {
+        logEvent('warn', 'No filename provided for download command.');
+        return;
+      }
+      const out = document.getElementById('file_command_output');
+      if (!out) return;
+
+      const ipInput = document.getElementById('public_ip');
+      const portInput = document.getElementById('file_port');
+      const ip = ipInput ? (ipInput.value || '').trim() : '';
+      const port = portInput ? (portInput.value || '').trim() : '';
+
+      if (!ip || !port) {
+        out.value = '';
+        logEvent('warn', 'Public IP and file server port are required to generate download commands.');
+        return;
+      }
+
+      const url = `http://${ip}:${port}/${encodeURIComponent(cleanName)}`;
+      let cmd = '';
+      if (osType === 'windows') {
+        cmd = `powershell -Command "Invoke-WebRequest -Uri '${url}' -OutFile '${cleanName}'"`;
+      } else {
+        cmd = `curl -o ${cleanName} ${url}`;
+      }
+      out.value = cmd;
+      logEvent('info', `Generated ${osType} download command for file: ${cleanName}`);
+    }
+
+    function copyFileDownloadCommand() {
+      const out = document.getElementById('file_command_output');
+      if (!out || !out.value) {
+        logEvent('warn', 'No file download command to copy.');
+        return;
+      }
+      navigator.clipboard.writeText(out.value).then(() => {
+        logEvent('success', 'File download command copied to clipboard.');
+      }).catch(err => {
+        console.warn('Clipboard error', err);
+        logEvent('error', 'Failed to copy file download command.');
+      });
+    }
+
+    async function runFSScout() {
+      const host = (document.getElementById('fs-host')?.value || '').trim();
+      const protocol = (document.getElementById('fs-protocol')?.value || '').trim();
+      const portStr = (document.getElementById('fs-port')?.value || '').trim();
+      const username = (document.getElementById('fs-username')?.value || '').trim();
+      const password = (document.getElementById('fs-password')?.value || '').trim();
+      const startDir = (document.getElementById('fs-startdir')?.value || '').trim();
+      const depthStr = (document.getElementById('fs-depth')?.value || '').trim();
+      const smbShare = (document.getElementById('fs-smb-share')?.value || '').trim();
+      const modeEl = document.querySelector('input[name="fs-mode"]:checked');
+      const mode = modeEl ? modeEl.value : 'fast';
+      const resultEl = document.getElementById('fs-result');
+
+      if (!host || !username || !password || !startDir) {
+        if (resultEl) resultEl.textContent = 'Host, username, password, and start directory are required.';
+        logEvent('warn', 'FS Scout: required fields missing.');
+        return;
+      }
+
+      let port = parseInt(portStr, 10);
+      if (Number.isNaN(port)) port = 0;
+      let depth = parseInt(depthStr, 10);
+      if (Number.isNaN(depth) || depth <= 0) depth = 3;
+
+      const payload = {
+        protocol: protocol,
+        host: host,
+        port: port,
+        username: username,
+        password: password,
+        start_dir: startDir,
+        depth: depth,
+        mode: mode,
+      };
+      if (protocol === 'smb') {
+        payload.smb_share = smbShare || '';
+      }
+
+      if (resultEl) resultEl.textContent = 'Running filesystem scout...';
+      logEvent('info', `Starting filesystem scout against ${host} using ${protocol} (${mode}).`);
+
+      try {
+        const res = await fetch('/api/fs-scout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const errMsg = data.error || ('HTTP ' + res.status);
+          if (resultEl) resultEl.textContent = 'FS Scout failed: ' + errMsg;
+          logEvent('error', 'FS Scout failed: ' + errMsg);
+          return;
+        }
+        const path = data.output_file || '(unknown file)';
+        let msg = 'FS Scout completed. Results saved at: ' + path;
+        if (data.error) {
+          msg += '\nWarning: ' + data.error;
+        }
+        if (resultEl) resultEl.textContent = msg;
+        logEvent('success', msg);
+      } catch (err) {
+        console.error('FS Scout error:', err);
+        if (resultEl) resultEl.textContent = 'FS Scout encountered an error.';
+        logEvent('error', 'FS Scout encountered an error: ' + err.message);
+      }
+    }
+
+    async function refreshFileList() {
+      const container = document.getElementById('file-list');
+      if (!container) return;
+      container.textContent = 'Loading...';
+      try {
+        const res = await fetch('/api/file-list');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const errMsg = data.error || ('HTTP ' + res.status);
+          container.textContent = 'Failed to load file list: ' + errMsg;
+          logEvent('error', 'File list load failed: ' + errMsg);
+          return;
+        }
+        if (!Array.isArray(data) || !data.length) {
+          container.textContent = 'No files found in file server directory.';
+          return;
+        }
+        container.innerHTML = '';
+        data.forEach((entry) => {
+          if (entry.is_dir) return;
+          const item = document.createElement('div');
+          item.classList.add('file-list-item');
+
+          const nameSpan = document.createElement('span');
+          nameSpan.classList.add('file-list-item-name');
+          nameSpan.textContent = entry.name;
+
+          const metaSpan = document.createElement('span');
+          metaSpan.classList.add('file-list-item-meta');
+          const sizeKb = (entry.size / 1024).toFixed(1);
+          metaSpan.textContent = sizeKb + ' KB';
+
+          const actions = document.createElement('div');
+          actions.classList.add('file-list-item-actions');
+
+          const btnLinux = document.createElement('button');
+          btnLinux.textContent = 'Linux cmd';
+          btnLinux.addEventListener('click', () => generateFileDownloadCommand(entry.name, 'linux'));
+
+          const btnWin = document.createElement('button');
+          btnWin.textContent = 'Windows cmd';
+          btnWin.addEventListener('click', () => generateFileDownloadCommand(entry.name, 'windows'));
+
+          actions.appendChild(btnLinux);
+          actions.appendChild(btnWin);
+
+          item.appendChild(nameSpan);
+          item.appendChild(metaSpan);
+          item.appendChild(actions);
+          container.appendChild(item);
+        });
+        logEvent('info', 'File list refreshed.');
+      } catch (err) {
+        console.error('File list error', err);
+        const container2 = document.getElementById('file-list');
+        if (container2) container2.textContent = 'Error loading file list.';
+        logEvent('error', 'Error loading file list: ' + err.message);
+      }
+    }
+    function logEvent(level, message) {
+      const container = document.getElementById('console-output');
+      if (!container) return;
+      const line = document.createElement('div');
+      line.classList.add('console-line');
+      const ts = new Date().toLocaleTimeString();
+      let prefix = '[-]';
+      let cls = 'console-info';
+      switch (level) {
+        case 'success': prefix = '[+]'; cls = 'console-success'; break;
+        case 'error': prefix = '[!]'; cls = 'console-error'; break;
+        case 'warn': prefix = '[*]'; cls = 'console-warn'; break;
+        default: break;
+      }
+      line.classList.add(cls);
+      line.textContent = `${prefix} ${ts} - ${message}`;
+      container.appendChild(line);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function flashSuccessButton(buttonId) {
+      const btn = document.getElementById(buttonId);
+      if (!btn) return;
+      btn.classList.add('btn-success-flash');
+      setTimeout(() => btn.classList.remove('btn-success-flash'), 700);
+    }
+
+    function typeWriter(elementId, text, delay = 60, onComplete) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      el.textContent = '';
+      let i = 0;
+      function step() {
+        if (i <= text.length) {
+          el.textContent = text.slice(0, i);
+          i++;
+          setTimeout(step, delay);
+        } else if (onComplete) {
+          onComplete();
+        }
+      }
+      step();
+    }
+
+    function playSkiddieSong() {
+      const audio = document.getElementById('skiddie-audio');
+      if (!audio) return;
+      try {
+        audio.currentTime = 0;
+        const p = audio.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch((err) => {
+            console.warn('Audio play blocked or failed:', err);
+          });
+        }
+      } catch (err) {
+        console.warn('Could not play skiddie audio:', err);
+      }
+    }
+
+    function stopSkiddieSong() {
+      const audio = document.getElementById('skiddie-audio');
+      if (!audio) return;
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch (err) {
+        console.warn('Could not stop skiddie audio:', err);
+      }
+    }
+
+    function playKonamiSound() {
+      const audio = document.getElementById('konami-audio');
+      if (!audio) return;
+      try {
+        audio.currentTime = 0;
+        const p = audio.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch((err) => {
+            console.warn('Konami audio play blocked or failed:', err);
+          });
+        }
+      } catch (err) {
+        console.warn('Could not play Konami audio:', err);
+      }
+    }
+
+    function stopKonamiSound() {
+      const audio = document.getElementById('konami-audio');
+      if (!audio) return;
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch (err) {
+        console.warn('Could not stop Konami audio:', err);
+      }
+    }
+
+    function spawnFlower() {
+      const emojiOptions = ['🌸', '🌺', '🌷', '💮', '🌼'];
+      const emoji = emojiOptions[Math.floor(Math.random() * emojiOptions.length)];
+      const el = document.createElement('div');
+      el.classList.add('flower');
+      el.textContent = emoji;
+      el.style.left = (Math.random() * 100) + 'vw';
+      const duration = 5000 + Math.random() * 4000;
+      el.style.animationDuration = duration + 'ms';
+      document.body.appendChild(el);
+      setTimeout(() => {
+        el.remove();
+      }, duration + 500);
+    }
+
+    function startFlowerRain() {
+      if (flowerIntervalId !== null) return;
+      flowerIntervalId = setInterval(spawnFlower, 600);
+    }
+
+    function stopFlowerRain() {
+      if (flowerIntervalId !== null) {
+        clearInterval(flowerIntervalId);
+        flowerIntervalId = null;
+      }
+      document.querySelectorAll('.flower').forEach(f => f.remove());
+    }
+
+    function enableGirlyMode() {
+      if (!document.body.classList.contains('girly-mode')) {
+        document.body.classList.add('girly-mode');
+      }
+      startFlowerRain();
+      playSkiddieSong();
+      logEvent('info', 'Girly Skiddie Mode visuals enabled.');
+    }
+
+    function disableGirlyMode() {
+      document.body.classList.remove('girly-mode');
+      stopFlowerRain();
+      stopSkiddieSong();
+      logEvent('info', 'Girly Skiddie Mode visuals disabled.');
+    }
+
+    async function loadConfig() {
+      try {
+        setStatus('Loading config...');
+        setError('');
+        const res = await fetch('/api/config');
+        if (!res.ok) throw new Error('Failed to load config');
+        const cfg = await res.json();
+        document.getElementById('public_ip').value = cfg.public_ip || '';
+        document.getElementById('proxy_bind').value = cfg.proxy_bind || '';
+        document.getElementById('proxy_port').value = cfg.proxy_port || '';
+        document.getElementById('proxy_binary').value = cfg.proxy_binary || '';
+        document.getElementById('agent_binary').value = cfg.agent_binary || '';
+        setStatus('Config loaded');
+      } catch (err) {
+        setStatus('');
+        setError('Error: ' + err.message);
+        console.error(err);
+      }
+    }
+
+    async function saveConfig() {
+      try {
+        setStatus('Saving...');
+        setError('');
+        const body = {
+          public_ip: document.getElementById('public_ip').value,
+          proxy_bind: document.getElementById('proxy_bind').value,
+          proxy_port: Number(document.getElementById('proxy_port').value),
+          proxy_binary: document.getElementById('proxy_binary').value,
+          agent_binary: document.getElementById('agent_binary').value,
+        };
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || 'Failed to save config');
+        }
+        setStatus('Saved');
+        logEvent('info', 'Config saved');
+      } catch (err) {
+        setStatus('');
+        setError('Error: ' + err.message);
+        console.error(err);
+        logEvent('error', 'Failed to save config');
+      }
+    }
+
+    async function startProxy() {
+      try {
+        setStatus('Starting proxy...');
+        setError('');
+        const res = await fetch('/api/start-proxy', { method: 'POST' });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || 'Failed to start proxy');
+        }
+        setStatus('Proxy started');
+        logEvent('success', 'Proxy started');
+        flashSuccessButton('startProxyBtn');
+        await refreshProxyStatus();
+      } catch (err) {
+        setStatus('');
+        setError('Error: ' + err.message);
+        console.error(err);
+        logEvent('error', 'Failed to start proxy');
+      }
+    }
+
+    async function stopProxy() {
+      try {
+        setStatus('Stopping proxy...');
+        setError('');
+        const res = await fetch('/api/stop-proxy', { method: 'POST' });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || 'Failed to stop proxy');
+        }
+        setStatus('Proxy stopped');
+        logEvent('warn', 'Proxy stopped');
+        await refreshProxyStatus();
+      } catch (err) {
+        setStatus('');
+        setError('Error: ' + err.message);
+        console.error(err);
+        logEvent('error', 'Failed to stop proxy');
+      }
+    }
+
+    async function refreshProxyStatus() {
+      try {
+        const res = await fetch('/api/status');
+        if (!res.ok) {
+          proxyStatusText.textContent = 'error';
+          updateStatusPill(document.getElementById('proxy-status'), null);
+          return;
+        }
+        const data = await res.json();
+        const running = !!data.proxy_running;
+        proxyStatusText.textContent = running ? 'running' : 'stopped';
+        updateStatusPill(document.getElementById('proxy-status'), running);
+      } catch (err) {
+        proxyStatusText.textContent = 'error';
+        updateStatusPill(document.getElementById('proxy-status'), null);
+        console.error('Status fetch failed:', err);
+      }
+    }
+
+    async function loadFileConfig() {
+      try {
+        const res = await fetch('/api/file-config');
+        if (!res.ok) {
+          console.error('Failed to load file config:', res.status);
+          return;
+        }
+        const cfg = await res.json();
+        document.getElementById('file_bind').value = cfg.file_bind || '';
+        document.getElementById('file_port').value = cfg.file_port || '';
+        document.getElementById('file_directory').value = cfg.file_directory || '';
+      } catch (err) {
+        console.error('Error loading file config:', err);
+      }
+    }
+
+    async function saveFileConfig() {
+      const body = {
+        file_bind: document.getElementById('file_bind').value,
+        file_port: parseInt(document.getElementById('file_port').value, 10) || 0,
+        file_directory: document.getElementById('file_directory').value,
+      };
+      try {
+        const res = await fetch('/api/file-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          console.error('Failed to save file config:', res.status);
+          alert('Failed to save file server config');
+          return;
+        }
+        await res.json();
+        alert('File server config saved');
+        logEvent('info', 'File server config saved');
+      } catch (err) {
+        console.error('Error saving file config:', err);
+        alert('Error saving file config');
+        logEvent('error', 'Failed to save file server config');
+      }
+    }
+
+    async function refreshFileStatus() {
+      try {
+        const res = await fetch('/api/file-status');
+        if (!res.ok) {
+          fileStatusText.textContent = 'error';
+          updateStatusPill(document.getElementById('file-server-status'), null);
+          return;
+        }
+        const data = await res.json();
+        const running = !!data.file_server_running;
+        fileStatusText.textContent = running ? 'running' : 'stopped';
+        updateStatusPill(document.getElementById('file-server-status'), running);
+      } catch (err) {
+        fileStatusText.textContent = 'error';
+        updateStatusPill(document.getElementById('file-server-status'), null);
+        console.error('File status fetch failed:', err);
+      }
+    }
+
+    async function startFileServer() {
+      try {
+        const res = await fetch('/api/file-start', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Failed to start file server');
+          return;
+        }
+        logEvent('success', 'File server started');
+        flashSuccessButton('btn-file-start');
+        await refreshFileStatus();
+      } catch (err) {
+        console.error('Start file server failed:', err);
+        alert('Failed to start file server');
+        logEvent('error', 'Failed to start file server');
+      }
+    }
+
+    async function stopFileServer() {
+      try {
+        const res = await fetch('/api/file-stop', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Failed to stop file server');
+          return;
+        }
+        logEvent('warn', 'File server stopped');
+        await refreshFileStatus();
+      } catch (err) {
+        console.error('Stop file server failed:', err);
+        alert('Failed to stop file server');
+        logEvent('error', 'Failed to stop file server');
+      }
+    }
+
+    async function runSkiddieMode() {
+      const skStatus = document.getElementById('skiddie-status');
+      if (skStatus) skStatus.textContent = 'Running Skiddie Mode... This may take a moment.';
+      logEvent('info', 'Skiddie Mode initiated.');
+      try {
+        const res = await fetch('/api/skiddie', { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const errMsg = data.error || ('HTTP ' + res.status);
+          if (skStatus) skStatus.textContent = 'Skiddie Mode failed: ' + errMsg;
+          logEvent('error', 'Skiddie Mode failed: ' + errMsg);
+          return;
+        }
+        const msg = data.message || 'Skiddie Mode completed.';
+        if (skStatus) skStatus.textContent = msg;
+        logEvent('success', msg);
+        if (data.proxy_path) logEvent('info', 'Proxy binary: ' + data.proxy_path);
+        if (data.agent_name) logEvent('info', 'Agent binary name: ' + data.agent_name);
+        enableGirlyMode();
+        loadConfig();
+      } catch (err) {
+        console.error('Skiddie Mode error:', err);
+        if (skStatus) skStatus.textContent = 'Skiddie Mode encountered an error.';
+        logEvent('error', 'Skiddie Mode encountered an error: ' + err.message);
+      }
+    }
+
+    async function genFileCommand(osType) {
+      const filename = document.getElementById('file_filename').value.trim();
+      if (!filename) {
+        alert('Please enter a filename');
+        return;
+      }
+      const params = new URLSearchParams({ os: osType, filename });
+      try {
+        const res = await fetch('/api/file-command?' + params.toString());
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Failed to generate command');
+          return;
+        }
+        document.getElementById('file_command_output').value = data.command || '';
+        logEvent('info', `Generated ${osType} download command for ${filename}`);
+      } catch (err) {
+        console.error('Error generating file command:', err);
+        alert('Error generating file command');
+        logEvent('error', 'Failed to generate download command');
+      }
+    }
+
+    async function copyFileCommand() {
+      const txt = document.getElementById('file_command_output').value;
+      if (!txt) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(txt);
+          alert('Command copied to clipboard');
+        } catch (err) {
+          console.error('Clipboard failed:', err);
+          alert('Failed to copy to clipboard');
+        }
+      } else {
+        alert('Clipboard API not available');
+      }
+    }
+
+    async function getCommand(osType) {
+      try {
+        setStatus('Fetching command...');
+        setError('');
+        const res = await fetch('/api/agent?os=' + encodeURIComponent(osType));
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || 'Failed to fetch command');
+        }
+        const data = await res.json();
+        commandBox.value = data.command || '';
+        setStatus('Command ready');
+        logEvent('info', `Generated ${osType} agent command`);
+      } catch (err) {
+        setStatus('');
+        setError('Error: ' + err.message);
+        console.error(err);
+        logEvent('error', 'Failed to fetch agent command');
+      }
+    }
+
+    async function copyCommand() {
+      try {
+        const text = commandBox.value;
+        if (!text) {
+          setError('Nothing to copy');
+          return;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+        setStatus('Copied to clipboard');
+      } catch (err) {
+        setError('Error: ' + err.message);
+        console.error(err);
+      }
+    }
+
+    function loadSessionInfo() {
+      try {
+        const raw = localStorage.getItem(SESSION_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        document.getElementById('session-name').value = data.name || '';
+        document.getElementById('session-targets').value = data.targets || '';
+        document.getElementById('session-notes').value = data.notes || '';
+      } catch (e) {
+        console.error('Failed to load session info', e);
+      }
+    }
+
+    function saveSessionInfo() {
+      const data = {
+        name: document.getElementById('session-name').value,
+        targets: document.getElementById('session-targets').value,
+        notes: document.getElementById('session-notes').value,
+      };
+      try {
+        localStorage.setItem(SESSION_KEY, JSON.stringify(data));
+        logEvent('info', 'Session info saved');
+        alert('Session info saved');
+      } catch (e) {
+        console.error('Failed to save session info', e);
+        alert('Failed to save session info');
+      }
+    }
+
+    function setCrtMode(enabled) {
+      if (enabled) document.body.classList.add('crt-mode');
+      else document.body.classList.remove('crt-mode');
+      localStorage.setItem('swissarmykit_crt', enabled ? '1' : '0');
+    }
+
+    function loadCrtMode() {
+      const v = localStorage.getItem('swissarmykit_crt');
+      const enabled = v === '1';
+      setCrtMode(enabled);
+      const chk = document.getElementById('crt-toggle');
+      if (chk) chk.checked = enabled;
+    }
+
+    function initKonamiCode() {
+      const sequence = [
+        'ArrowUp', 'ArrowUp',
+        'ArrowDown', 'ArrowDown',
+        'ArrowLeft', 'ArrowRight',
+        'ArrowLeft', 'ArrowRight',
+        'KeyB', 'KeyA'
+      ];
+      let index = 0;
+      window.addEventListener('keydown', (e) => {
+        const expected = sequence[index];
+        if (e.code === expected) {
+          index++;
+          if (index === sequence.length) {
+            index = 0;
+            setCrtMode(true);
+            const chk = document.getElementById('crt-toggle');
+            if (chk) chk.checked = true;
+            logEvent('success', 'Konami code accepted. CRT mode engaged.');
+            const titleEl = document.getElementById('app-title');
+            if (titleEl) {
+              titleEl.classList.add('glitch');
+              setTimeout(() => titleEl.classList.remove('glitch'), 800);
+            }
+            playKonamiSound();
+          }
+        } else {
+          index = 0;
+        }
+      });
+    }
+
+    function initTabs() {
+      const buttons = document.querySelectorAll('.tab-button');
+      const tabs = document.querySelectorAll('.tab-content');
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = btn.getAttribute('data-tab');
+          buttons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          tabs.forEach(t => {
+            if (t.id === 'tab-' + target) t.classList.add('active');
+            else t.classList.remove('active');
+          });
+        });
+      });
+    }
+
+    document.getElementById('saveBtn').addEventListener('click', saveConfig);
+    document.getElementById('startProxyBtn').addEventListener('click', startProxy);
+    document.getElementById('btn-stop-proxy').addEventListener('click', stopProxy);
+    document.getElementById('linuxCmdBtn').addEventListener('click', () => getCommand('linux'));
+    document.getElementById('winCmdBtn').addEventListener('click', () => getCommand('windows'));
+    document.getElementById('copyBtn').addEventListener('click', copyCommand);
+
+    document.getElementById('btn-file-save').addEventListener('click', saveFileConfig);
+    document.getElementById('btn-file-start').addEventListener('click', startFileServer);
+    document.getElementById('btn-file-stop').addEventListener('click', stopFileServer);
+    document.getElementById('btn-file-linux').addEventListener('click', () => genFileCommand('linux'));
+    document.getElementById('btn-file-windows').addEventListener('click', () => genFileCommand('windows'));
+    document.getElementById('btn-file-copy').addEventListener('click', copyFileCommand);
+    const fileRefreshBtn = document.getElementById('file-refresh-btn');
+    if (fileRefreshBtn) fileRefreshBtn.addEventListener('click', refreshFileList);
+    const fileCmdCopyBtn = document.getElementById('file-command-copy-btn');
+    if (fileCmdCopyBtn) fileCmdCopyBtn.addEventListener('click', copyFileDownloadCommand);
+    const fsBtn = document.getElementById('fs-run-btn');
+    if (fsBtn) fsBtn.addEventListener('click', runFSScout);
+
+    const skBtn = document.getElementById('btn-skiddie-run');
+    if (skBtn) skBtn.addEventListener('click', runSkiddieMode);
+    const girlyOffBtn = document.getElementById('btn-girly-off');
+    if (girlyOffBtn) girlyOffBtn.addEventListener('click', disableGirlyMode);
+    const routeGenBtn = document.getElementById('route-generate-btn');
+    if (routeGenBtn) routeGenBtn.addEventListener('click', buildRouteCommand);
+    const routeCopyBtn = document.getElementById('route-copy-btn');
+    if (routeCopyBtn) routeCopyBtn.addEventListener('click', copyRouteCommand);
+    const proxySaveBtn = document.getElementById('proxy-profile-save-btn');
+    if (proxySaveBtn) proxySaveBtn.addEventListener('click', saveProxyProfileFromForm);
+    const proxyClearBtn = document.getElementById('proxy-profile-clear-btn');
+    if (proxyClearBtn) proxyClearBtn.addEventListener('click', clearProxyProfileForm);
+    document.getElementById('session-save-btn').addEventListener('click', saveSessionInfo);
+    document.getElementById('console-clear-btn').addEventListener('click', () => {
+      const container = document.getElementById('console-output');
+      if (container) container.innerHTML = '';
+    });
+    const crtToggle = document.getElementById('crt-toggle');
+    if (crtToggle) {
+      crtToggle.addEventListener('change', (e) => {
+        setCrtMode(e.target.checked);
+        logEvent('info', 'CRT mode ' + (e.target.checked ? 'enabled' : 'disabled'));
+      });
+    }
+
+    window.onload = function() {
+      const titleText = 'PivotOnTheGO';
+      const subtitleText = 'Offensive Lab & Pivot Toolkit';
+      typeWriter('app-title', titleText, 60, () => {
+        const titleEl = document.getElementById('app-title');
+        if (titleEl) {
+          titleEl.classList.add('glitch');
+          setTimeout(() => titleEl.classList.remove('glitch'), 500);
+        }
+      });
+      typeWriter('app-subtitle', subtitleText, 30);
+
+      initTabs();
+      loadConfig();
+      refreshProxyStatus();
+      setInterval(refreshProxyStatus, 10000);
+
+      loadFileConfig();
+      refreshFileStatus();
+      setInterval(refreshFileStatus, 10000);
+      refreshFileList();
+      loadProxyProfiles();
+
+      loadSessionInfo();
+      loadCrtMode();
+      initKonamiCode();
+    };
+  </script>
+</body>
+</html>

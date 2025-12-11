@@ -1,0 +1,6 @@
+bin/
+pivotonthego
+*.log
+*.history
+*.yaml
+ligolo-selfcerts/
